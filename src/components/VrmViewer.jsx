@@ -32,9 +32,24 @@ export default function VrmViewer({ isTalking }) {
         controls.target.set(0.0, 1.4, 0.0);
         controls.update();
 
-        const light = new THREE.DirectionalLight(0xffffff, 1.0);
-        light.position.set(1.0, 1.0, 1.0).normalize();
-        scene.add(light);
+        // แสงพื้นฐาน
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        // แสงหลัก
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        directionalLight.position.set(1.5, 3.5, 2.5);
+        scene.add(directionalLight);
+
+        // แสงเติม
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        fillLight.position.set(-2, 1.5, 2);
+        scene.add(fillLight);
+
+        // Rim Light ด้านหลัง
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        rimLight.position.set(0, 2, -3);
+        scene.add(rimLight);
 
         const gltfLoader = new GLTFLoader();
         gltfLoader.register((parser) => new VRMLoaderPlugin(parser));

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, Send, MessageSquare, MessageCircle, X } from 'lucide-react';
 import VrmViewer from './components/VrmViewer';
 import { useGemini } from './hooks/useGemini';
 import { useElevenLabs } from './hooks/useElevenLabs';
@@ -7,7 +7,6 @@ import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { stopAudioPlayback } from './utils/audioSystem';
 import './index.css';
 
-// Using API keys from environment variables
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
 
@@ -17,14 +16,16 @@ function App() {
   const { isRecording, transcript, startRecording, stopRecording, isSupported } = useSpeechRecognition(systemLanguage);
   
   const [inputText, setInputText] = useState('');
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
 
   // Auto-scroll chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isThinking]);
+    if (isChatOpen) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isThinking, isChatOpen]);
 
-  // Handle speech recognition result
   const handleSpeechResult = async (text) => {
     stopRecording();
     if (text.trim()) {
@@ -55,7 +56,7 @@ function App() {
     if (isRecording) {
       stopRecording();
     } else {
-      stopAudioPlayback(); // Stop any currently playing audio so it doesn't bleed into mic
+      stopAudioPlayback();
       startRecording(handleSpeechResult);
     }
   };
@@ -70,17 +71,49 @@ function App() {
       <VrmViewer isTalking={isPlaying} />
       
       <div className="ui-layer">
-        <div className="glass-panel chat-sidebar">
+        
+        {/* Floating Mic Button (Bottom Left) */}
+        <button 
+          className={`floating-mic icon-btn ${isRecording ? 'recording' : ''}`}
+          onClick={toggleMic}
+          disabled={!isSupported || isThinking}
+          title={isRecording ? "Stop Recording" : "Start Microphone"}
+        >
+          {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
+        </button>
+
+        {/* Floating Chat Toggle (Bottom Right) */}
+        {!isChatOpen && (
+          <button 
+            className="floating-toggle icon-btn"
+            onClick={() => setIsChatOpen(true)}
+            title="Open Chat"
+          >
+            <MessageCircle size={28} />
+          </button>
+        )}
+
+        {/* Collapsible Chat Sidebar */}
+        <div className={`chat-sidebar ${!isChatOpen ? 'hidden' : ''}`}>
           <div className="chat-header">
-            <h2>Amadeus AI</h2>
-            <select 
-              className="lang-select" 
-              value={systemLanguage} 
-              onChange={(e) => setSystemLanguage(e.target.value)}
-            >
-              <option value="th-TH">Thai (th-TH)</option>
-              <option value="ja-JP">Japanese (ja-JP)</option>
-            </select>
+            <img src="/images/Amadeuslogo.png" alt="Amadeus AI" className="chat-logo" />
+            
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <select 
+                className="lang-select" 
+                value={systemLanguage} 
+                onChange={(e) => setSystemLanguage(e.target.value)}
+              >
+                <option value="th-TH">TH</option>
+                <option value="ja-JP">JP</option>
+              </select>
+              <button 
+                onClick={() => setIsChatOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           <div className="chat-history">
@@ -105,56 +138,31 @@ function App() {
             <div ref={chatEndRef} />
           </div>
 
-          <div className="chat-controls" style={{ flexDirection: 'column' }}>
-            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+          <div className="chat-controls">
+            <div className="input-row">
               <input 
                 type="text" 
+                className="text-input"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendText()}
                 placeholder="Type a message..."
-                style={{
-                  flex: 1, padding: '10px 14px', borderRadius: '8px', 
-                  border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)',
-                  color: 'white', outline: 'none'
-                }}
               />
               <button 
+                className="send-btn"
                 onClick={handleSendText}
                 disabled={isThinking || !inputText.trim()}
-                style={{
-                  padding: '10px', borderRadius: '8px', background: 'var(--primary)',
-                  color: 'white', border: 'none', cursor: 'pointer',
-                  opacity: (isThinking || !inputText.trim()) ? 0.5 : 1
-                }}
               >
                 <Send size={20} />
               </button>
             </div>
             
-            <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '8px' }}>
-              <button 
-                className={`mic-btn ${isRecording ? 'recording' : ''}`}
-                onClick={toggleMic}
-                disabled={!isSupported || isThinking}
-              >
-                {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-                {isRecording ? 'Stop Recording' : 'Start Mic'}
-              </button>
-              
-              <button 
-                onClick={handleReset}
-                style={{
-                  padding: '10px 16px', borderRadius: '12px', background: 'transparent',
-                  color: 'var(--text-muted)', border: '1px solid var(--glass-border)', cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                Reset
-              </button>
-            </div>
+            <button className="reset-btn" onClick={handleReset}>
+              Reset Conversation
+            </button>
           </div>
         </div>
+
       </div>
     </div>
   );
